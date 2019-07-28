@@ -64,21 +64,5 @@ what do you want to say at last?
 your message :flag{aaaaaaaaaaaaaaa} we have received...
 have fun !
 ```
-那么为什么把stdin的fileno改成666 scanf会把flag读进来呢
 
-```c
-int
-__scanf (const char *format, ...)
-{
-  va_list arg;
-  int done;
-
-  va_start (arg, format);
-  done = _IO_vfscanf (stdin, format, arg, NULL);
-  va_end (arg);
-
-  return done;
-}
-```
-scanf调用了 _IO_vfscanf
 
