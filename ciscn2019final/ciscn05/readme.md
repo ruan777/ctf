@@ -80,5 +80,5 @@ __scanf (const char *format, ...)
   return done;
 }
 ```
-scanf调用了**_IO_vfscanf**
+scanf调用了 _IO_vfscanf
 
