@@ -838,7 +838,7 @@ if __name__ == "__main__":
 
 ## warmup
 
-瞒打，给了个地址，直接爆栈溢出长度就好了
+盲打，给了个地址，直接爆栈溢出长度就好了
 
 ```python
 from pwn import *
