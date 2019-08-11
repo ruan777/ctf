@@ -2,7 +2,7 @@
 
 ## easy_fmt
 
-格式化字符串攻击，先把exit@got劫持了，在劫持write@got为one_gadget
+格式化字符串攻击，先把exit@got劫持了，在劫持write@got为one_gadget,祖传格式化字符串攻击脚本，tr3e学长太强了
 ```python
 from pwn import *
 
