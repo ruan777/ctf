@@ -49,7 +49,7 @@ void __fastcall __noreturn start_routine(task *a1)
   v3 = 0LL;
   v4 = 0LL;
   puts("Prepare...");
-  sleep(2u);
+  sleep(2u);		//!!
   memset(qword_202030, 0, 0x1010uLL);
   if ( !(unsigned int)EVP_CipherUpdate(
                         v2[0]->EVP_CTX_new_PTR,
@@ -220,5 +220,5 @@ def main():
 if __name__ == "__main__":
 	main()
 ```
-
+参考链接：
 [https://www.anquanke.com/post/id/175401](https://www.anquanke.com/post/id/175401)
