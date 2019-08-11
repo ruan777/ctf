@@ -111,7 +111,7 @@ buy函数里有个堆溢出
   return puts("Done!");
 }
 ```
-当我们v9输入很大是，sz会变成负数，就绕过了money<sz的check，而后面仅malloc了sz&0x1ff的大小，配合check_out函数可以堆溢出
+当我们v9输入很大时，sz会变成负数，就绕过了money<sz的check，而后面仅malloc了sz&0x1ff的大小，配合check_out函数可以堆溢出
 
 ```c
 else
@@ -135,7 +135,7 @@ else
   }
 ```
 
-由于check_out函数只能用一次，所以我的思路是堆溢出修改tcache指向dword_2040B0，使得可以再次check_out,有了栈地址，后面rop即可，堆的布局要布置好，不然会free的时候会挂掉
+由于check_out函数只能用一次，所以我的思路是堆溢出修改tcache指向dword_2040B0，使得可以再次check_out,有了栈地址，后面rop即可，堆的布局要布置好，不然free的时候会挂掉
 
 第一次溢出时我把堆覆盖成了这样
 ```sh
@@ -248,6 +248,8 @@ if __name__ == "__main__":
 # Crypto
 
 ##  common_encrypt
+
+签到题
 
 ```python
 enc = "f^n2ekass:iy~>w|`ef\"${Ip)8if"
