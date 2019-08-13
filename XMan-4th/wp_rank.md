@@ -74,6 +74,7 @@ if __name__ == "__main__":
 ## curse_note
 
 漏洞为任意地址写一字节 '\x00' ,这题好难啊，留下了没技术的眼泪，后面捣鼓了很久，终于解了出来，但是好像是非预期，哭了
+
 我的解是在sub_heap中用house_of_force,使得sub_heap的top_chunk在free_hook上方，然后size的值会写入free_hook，靠这个劫持free_hook,但是size有点特殊，应为size相减的时候后3bit都是0，所以最后写入free_hook的值是以1或者9结尾的，在libc中找了好久，最后system+1的位置刚刚好，太艰难了
 
 ```c
@@ -170,6 +171,7 @@ if __name__ == "__main__":
 	main(args['REMOTE'])
 ```
 后来看了下解出这题的大佬的exp，原先也想过这个方法，但是对堆不熟悉，在sub_heap中的chunk_size是要或上 NON_MAIN_ARENA（0x4）的，导致free的时候一直报错，太菜了，膜大佬
+
 大佬的exp:  (改成了我自己的写法，但是流程没变
 
 ```python
@@ -280,6 +282,8 @@ if __name__ == "__main__":
 	libc = ELF("./libc.so.6",checksec=False)
 	main(args['REMOTE'])
 ```
+
+大佬的链接 [https://github.com/qaqmander/ctf-history/blob/master/xman_rank/note/test.py](https://github.com/qaqmander/ctf-history/blob/master/xman_rank/note/test.py)
 
 
 ## weapon_storage
