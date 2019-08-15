@@ -2,10 +2,25 @@
 
 这是我能解的唯一一道题目了，哭了
 
-新版本的libc对off_by_one进行了检查，原先常用的两块中间夹一块的方法不行了，但是还是可以利用的。（我表达的不是很好，直接贴ppt把
+新版本的libc对off_by_one进行了检查，原先常用的两块中间夹一块的方法不行了
 
+```c
+ /* consolidate backward */
+    if (!prev_inuse(p)) {
+      prevsize = prev_size (p);
+      size += prevsize;
+      p = chunk_at_offset(p, -((long) prevsize));
+      if (__glibc_unlikely (chunksize(p) != prevsize))
+        malloc_printerr ("corrupted size vs. prev_size while consolidating");
+      unlink_chunk (av, p);
+    }
+```
 
+绕过的方式：（贴大佬的ppt吧
 
+![](https://github.com/ruan777/ctf/blob/master/tctf2019/babyheap2.29/heap.png)
+
+最终的exp脚本：
 
 ```python
 from pwn import *
