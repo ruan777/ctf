@@ -1,6 +1,6 @@
 # Zero_task
 
-0ctf的题都好难，大佬们tql
+0ctf的题都好难，一题都打不动，大佬们tql，（这题还是最简单的，orz
 
 漏洞为条件竞争,libc版本为2.27，存在tcache,go的时候线程sleep了2秒,我们可以提前释放一个task2结构，然后在task1 go的时候，把task1删除，然后task1的data成员会被覆盖成task2的地址,然后只要task1的data_sz足够大，就能把task2的内容全部都加密输出，后面用一次go的机会解密输出就能泄露地址。要注意的是删除task1的时候，task1的EVP_CIPHER_CTX 对象（对象大小为0xb0）会被破化，这样会导致加密异常，所以要想办法克服这个问题。
 参考大佬的方法：
