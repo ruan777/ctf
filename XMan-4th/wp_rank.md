@@ -360,7 +360,7 @@ tcachebins
 0x180 [  1]: 0x55601de706b0 —▸ 0x7ffced4a2468 —▸ 0x55601d5f4d81 ◂— lea    rax, [rbp - 0x20]
 
 ```
-其中**0x55601d7f80ac**是为了改写dword_2040B0
+其中**0x55601d7f80ac**是为了改写dword_2040B0,0x7ffced4a2468 是栈的地址
 
 后面就只需要把0x180的chunk取出来就可以rop了，system("/bin/sh")一直不成功，后面换成execve("/bin/sh",0,,0),成功getshell
 
