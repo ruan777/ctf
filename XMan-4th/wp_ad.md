@@ -174,5 +174,5 @@ if __name__ == '__main__':
 	main(args["REMOTE"])
     
 ```
-
+看了樱花师傅的博客懂的，orz
 参考链接： [http://eternalsakura13.com/2018/04/24/starctf_babystack/](http://eternalsakura13.com/2018/04/24/starctf_babystack/)
