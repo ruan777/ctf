@@ -1,13 +1,13 @@
 # EscapeVm
 
-不得不说这题很有意思，国赛的时候一堆的堆题，这题让人焕然一新。原先也解过类似的题目，但是我知道自己的逆向能力不太好，当时就没去看这题了。pizza真的tql
+不得不说这题很有意思，国赛的时候一堆的堆题，这题让人焕然一新，给出题人点赞。原先也解过类似的题目，但是我知道自己的逆向能力不太好，要是解的话肯定要花非常非常久，于是当时就没去看这题了。不得不说pizza真的tql
 
 题目环境是Ubuntu16.04,libc是2.23的
 
 题目的
 
 ```c
-case 6:                                 // oob read
+	case 6:                                 // oob read
           v12 = (v22 >> 9) & 7;
           v13 = &reg->r0 + v12;
           *v13 = read_mem(
@@ -82,4 +82,5 @@ if __name__ == "__main__":
 
 参考链接： 
 [https://xz.aliyun.com/t/5842](https://xz.aliyun.com/t/5842)
+
 [https://justinmeiners.github.io/lc3-vm/](https://justinmeiners.github.io/lc3-vm/)
