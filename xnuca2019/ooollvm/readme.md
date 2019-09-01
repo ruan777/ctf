@@ -1,6 +1,6 @@
 # ooollvm
 
-通过动态调试一步一步的调出flag
+通过动态调试一步一步的调出flag,我这个flag好像是多解中的一个....
 
 程序对每个字符的判断逻辑，只有这两种处理方式:
 
@@ -273,3 +273,7 @@ int main(){
 }
 
 ```
+
+官方wp:
+
+[https://github.com/NeSE-Team/OurChallenges/tree/master/XNUCA2019Qualifier/Reverse/ooollvm](https://github.com/NeSE-Team/OurChallenges/tree/master/XNUCA2019Qualifier/Reverse/ooollvm)
