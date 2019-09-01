@@ -3,6 +3,7 @@
 通过动态调试一步一步的调出flag
 
 程序对每个字符的判断逻辑，只有这两种处理方式:
+
 (这是寻找符合条件的代码
 
 ```c
@@ -23,6 +24,7 @@ for(i = 0;i < 256;i++){
 ```
 
 flag{this_is_a_naive_but_hard_obfuscated_program_compiled_by_llvm_pass}
+
 （flag 连蒙带猜的，还好单词没有被替换成数字啥的
 
 这是我调试时写的代码，（很乱
