@@ -1,5 +1,7 @@
 # mulnote
 
+环境是ubuntu16.04,libc是2.23的
+
 `free`的时候`sleep`了10秒,造成`UAF`
 
 ```python=
