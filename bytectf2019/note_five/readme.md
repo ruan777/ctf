@@ -1,7 +1,7 @@
 # note_five
 
 
-环境是`Ubuntu18.04`，`2.27`的libc
+环境是`Ubuntu16.04`，`2.23`的libc
 
 程序的`edit`功能存在`off_by_one`,先`overlap`，然后`unsortedbin attack`攻击`global_maxfast`
 
