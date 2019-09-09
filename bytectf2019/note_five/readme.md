@@ -1,6 +1,8 @@
 # note_five
 
 
+环境是`Ubuntu18.04`，`2.27`的libc
+
 程序的`edit`功能存在`off_by_one`,先`overlap`，然后`unsortedbin attack`攻击`global_maxfast`
 
 然后一系列利用攻击到`stdout`泄露出libc，我选择的地方是`_IO_stdout_2_1-0x51`(1/16的概率)的位置，那里有个0xff
