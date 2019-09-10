@@ -6,7 +6,7 @@
 
 然后程序还提供了一个`vip`的函数，然后输入`name`的时候存在溢出，可以覆盖`seccomp`的规则
 
-这里推荐用`seccomp-tools`这个工具写规则，太好用了，tql
+这里推荐用 [seccomp-tools](https://github.com/david942j/seccomp-tools) 这个工具写规则，太好用了，tql
 
 根据`seccomp-tools`的使用说明，我写了如下规则，
 ```asm
