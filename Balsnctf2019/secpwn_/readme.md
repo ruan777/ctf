@@ -357,7 +357,8 @@ if __name__ == "__main__":
 	elf = ELF("./secpwn",checksec=False)
 	main(args['REMOTE'])
 
-
-
 ```
 
+参考链接：
+
+[https://ex-origin.github.io/2019/10/08/Balsn-CTF-2019-PWN-writeup/#more](https://ex-origin.github.io/2019/10/08/Balsn-CTF-2019-PWN-writeup/#more)
