@@ -516,7 +516,7 @@ int main(int argc, char *argv[])
 sudo gdb attach `pidof qemu-system-x86_64`
 ```
 
-在相对应的函数处下断点，最后在qemu虚拟机里面`sudo ./exp`就可以调试了:happy:
+在相对应的函数处下断点，最后在qemu虚拟机里面`sudo ./exp`就可以调试了
 
 ## 总结
 
