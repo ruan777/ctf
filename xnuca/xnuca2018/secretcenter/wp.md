@@ -37,7 +37,7 @@ if ( v3 == strlen(secret) )
   _fprintf_chk((__int64)stderr, 1LL, (__int64)&buf);
 ```
 
-格式化字符串，但是由于是向stderr输出，不会输出给用户，所以没法泄露（本地是可以泄露的
+格式化字符串，但是由于是向stderr输出，不会输出给用户，所以没法泄露,本地测试的话可以来个`exec 2> /dev/null`
 
 **Guard Ready**和**Set Guard**函数：
 

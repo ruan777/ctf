@@ -319,7 +319,7 @@ void __fastcall hitb_dma_timer(HitbState *opaque)
 
 - 先是越界读的内容，往`dma_buf`后面是`enc`函数指针，可以读取该指针的值以实现地址泄露。泄露地址后根据偏移，可以得到程序基址，然后计算得到`system plt`地址。
 
-- 将参数`cat /root/flag`写入到`buf_buf`中。
+- 将参数`cat /root/flag`写入到`dma_buf`中。
 
 - 其次是越界写的内容，可以将`system plt`地址写入到`enc`指针，最后触发`enc`函数实现`system`函数的调用，实现`system("cat /root/flag")`。
 
