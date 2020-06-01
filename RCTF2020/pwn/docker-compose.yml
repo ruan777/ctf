@@ -1,0 +1,44 @@
+version: '2'
+services:
+    no_write:
+        build: ./no_write
+        image: no_write:latest
+        ports:
+          - "6000:9999"
+        restart: unless-stopped
+    vm:
+        build: ./vm
+        image: vm:latest
+        ports:
+          - "6001:9999"
+        restart: unless-stopped
+    bf:
+        build: ./bf
+        image: bf:latest
+        ports:
+          - "6002:9999"
+        restart: unless-stopped
+    note:
+        build: ./note
+        image: note:latest
+        environment:
+            - OLDPWD=/home
+            - XDG_RUNTIME_DIR=/run/user/1000
+            - LESSOPEN=| /usr/bin/lesspipe %s
+            - LANG=en_US
+            - SHLVL=1
+            - SHELL=/bin/bash
+            - FLAG=/
+            - ROOT=/
+            - TCP_PORT=6004
+            - PORT=6004
+            - X_PORT=6004
+            - SERVICE=fd
+            - XPC_FLAGS=0x0
+            - TMPDIR=/tmp
+            - RBENV_SHELL=bash
+        ports:
+            - "6004:6004"
+        expose:
+            - "6004"
+        restart: unless-stopped

@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "iostream": "cpp",
+        "stack": "cpp",
+        "xstring": "cpp",
+        "system_error": "cpp"
+    }
+}
