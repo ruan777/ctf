@@ -13,7 +13,7 @@ struct brain_fck{
 
 `'>'` op caused `off_by_one` ：
 
-![t1wWlV.png](https://s1.ax1x.com/2020/05/31/t1wWlV.png)
+![](./img/bf1.png)
 
 The  compare condition is `v21 > &v25` not  `>=`，so we can read or modify the brain_fck.code's lowbit.
 
@@ -209,7 +209,7 @@ The program first reads an instruction of 0x1000 length, then checks whether the
 
 There are no check with JMP and JSR instruction in the check_instruction function，and look at the init_vm function：
 
-![t1gaSH.png](https://s1.ax1x.com/2020/05/31/t1gaSH.png)
+![](./img/vm1.png)
 
 vm->stack is allocated after vm->pc，it means vm->stack at high address，so we can push the instruction into stack first and jmp to stack to run the instruction that not be checked. Now we can use MOV instruction to arbitrary read and write.
 
@@ -481,7 +481,7 @@ mips64 big endian，not stripped
 
 The logic of the program is not very complicated, it is a simple http server,  a stack overflow in the following code:
 
-![t3D0Df.png](https://s1.ax1x.com/2020/05/31/t3D0Df.png)
+![./img/mginx1.png](./img/mginx1.png)
 
 This sStack4280 variable is the length of our `Content-Length` plus `body length`. If we set `Content-Length` to 4095 and fill in multiple bytes in the body, then sStack4280 will exceed 0x1000 and directly cause stack overflow, here is a poc: 
 
@@ -500,11 +500,11 @@ With this stack overflow, we can hijack the return address of the main function,
 
 Since we can stack overflow, the first thing that i think is ROP, but this program doesn't have many gadgets that can be used, so ROP is not very good, let's look at the instructions end of main function
 
-![t3yTIS.png](https://s1.ax1x.com/2020/05/31/t3yTIS.png)
+![./img/mginx2.png](./img/mginx2.png)
 
 we can control ra, s8 and gp，After many attempts, I finally chose to jump here:
 
-![t3yoa8.png](https://s1.ax1x.com/2020/05/31/t3yoa8.png)
+![./img/mginx3.png](./img/mginx3.png)
 
 we can overwrite the s8 as the address of the data segment, so that we can read our shellcode into data segment, and use the stack overflow in the main function to overwrite the return address as the address of the shellcode :D. 
 
@@ -593,7 +593,7 @@ if __name__ == "__main__":
 
 get flag!
 
-![t81MpF.png](https://s1.ax1x.com/2020/06/01/t81MpF.png)
+![./img/mginx4.png](./img/mginx4.png)
 
 getshell exp:
 
@@ -882,7 +882,7 @@ Understand the logic of the program, write the correct decryption function
 
 The initial value of key comes from the rand() function, you need to brute force the key
 
-![t342RK.png](https://s1.ax1x.com/2020/06/01/t342RK.png)
+![./img/cipher1.png](./img/cipher1.png)
 
 exp：
 
