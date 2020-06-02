@@ -511,6 +511,7 @@ we can overwrite the s8 as the address of the data segment, so that we can read 
 exp：
 
 ```python
+#python exp.py REMOTE=124.156.129.96 DEBUG
 from pwn import *
 import sys
 
